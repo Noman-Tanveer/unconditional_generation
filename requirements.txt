@@ -1,0 +1,11 @@
+accelerate
+bitsandbytes
+datasets
+diffusers
+omegaconf
+tensorboard
+torch
+torchvision
+transformers
+tqdm
+xformers

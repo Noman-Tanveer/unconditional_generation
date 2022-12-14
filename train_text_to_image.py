@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Iterable, Optional
 
 import numpy as np
+from omegaconf import OmegaConf
 import torch
 import torch.nn.functional as F
 import torch.utils.checkpoint
@@ -23,6 +24,7 @@ from huggingface_hub import HfFolder, Repository, whoami
 from torchvision import transforms
 from tqdm.auto import tqdm
 from transformers import CLIPTextModel, CLIPTokenizer
+from transformers import LayoutLMv3Model
 
 
 # Will error if the minimal version of diffusers is not installed. Remove at your own risks.
@@ -474,8 +476,8 @@ def main():
     train_transforms = transforms.Compose(
         [
             transforms.Resize((args.resolution, args.resolution), interpolation=transforms.InterpolationMode.BILINEAR),
-            transforms.CenterCrop(args.resolution) if args.center_crop else transforms.RandomCrop(args.resolution),
-            transforms.RandomHorizontalFlip() if args.random_flip else transforms.Lambda(lambda x: x),
+            # transforms.CenterCrop(args.resolution) if args.center_crop else transforms.RandomCrop(args.resolution),
+            # transforms.RandomHorizontalFlip() if args.random_flip else transforms.Lambda(lambda x: x),
             transforms.ToTensor(),
             transforms.Normalize([0.5], [0.5]),
         ]

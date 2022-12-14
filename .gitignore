@@ -3,3 +3,7 @@ scheduler
 unet
 *_dataset
 *_data
+*-64
+*-128
+*-256
+*-512
