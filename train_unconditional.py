@@ -286,7 +286,7 @@ def main(args):
         [
             Resize(args.resolution, interpolation=InterpolationMode.BILINEAR),
             CenterCrop(args.resolution),
-            # RandomHorizontalFlip(),
+            RandomHorizontalFlip(),
             ToTensor(),
             Normalize([0.5], [0.5]),
         ]
@@ -309,7 +309,6 @@ def main(args):
     logger.info(f"Dataset size: {len(dataset)}")
 
     dataset.set_transform(transforms)
-    # Change Dataloader here
     train_dataloader = torch.utils.data.DataLoader(
         dataset, batch_size=args.train_batch_size, shuffle=True, num_workers=args.dataloader_num_workers
     )
