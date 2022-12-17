@@ -8,29 +8,27 @@ from typing import Iterable, Optional
 
 logger = logging.getLogger(__name__)
 
-def get_text_encoder(pretrained_model_name_or_path, revision):
+def get_text_encoder(args):
     text_encoder = LayoutLMv3Model.from_pretrained(
-        pretrained_model_name_or_path,
-        subfolder="text_encoder",
-        revision=revision,
+        args.encoder,
     )
     return text_encoder
 
 # Load models and create wrapper for stable diffusion
 
-def get_vae(pretrained_model_name_or_path, revision):
+def get_vae(args):
     vae = AutoencoderKL.from_pretrained(
-        pretrained_model_name_or_path,
+        args.pretrained_model_name_or_path,
         subfolder="vae",
-        revision=revision,
+        revision=args.revision,
     )
     return vae
 
-def get_unet(pretrained_model_name_or_path, revision):
+def get_unet(args):
     unet = UNet2DConditionModel.from_pretrained(
-        pretrained_model_name_or_path,
+        args.pretrained_model_name_or_path,
         subfolder="unet",
-        revision=revision,
+        revision=args.revision,
     )
     return unet
 

@@ -8,3 +8,4 @@ unet
 *-256
 *-512
 *.png
+*__pycache__

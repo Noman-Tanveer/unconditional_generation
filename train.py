@@ -23,7 +23,8 @@ from diffusers.utils import check_min_version
 from tqdm.auto import tqdm
 
 from ema import EMAModel
-from data_base import get_tokenizer
+from data_base import GetDataset
+from architecture import get_model_componenets
 
 # Will error if the minimal version of diffusers is not installed. Remove at your own risks.
 check_min_version("0.10.0.dev0")
@@ -36,10 +37,16 @@ def parse_args():
     parser.add_argument(
         "--pretrained_model_name_or_path",
         type=str,
-        default=None,
-        required=True,
+        default="CompVis/stable-diffusion-v1-4",
+        required=False,
         help="Path to pretrained model or model identifier from huggingface.co/models.",
     )
+    parser.add_argument(
+        "--encoder",
+        type=str,
+        default="microsoft/layoutlmv3-base",
+        required=False,
+        help="Encoder checkpoint to use, Modify encoder function if other than layoutlmv3")
     parser.add_argument(
         "--revision",
         type=str,
@@ -50,7 +57,7 @@ def parse_args():
     parser.add_argument(
         "--dataset_name",
         type=str,
-        default=None,
+        default="nielsr/funsd",
         help=(
             "The name of the Dataset (from the HuggingFace hub) to train on (could be your own, possibly private,"
             " dataset). It can also be a path pointing to a local copy of a dataset in your filesystem,"
@@ -114,17 +121,7 @@ def parse_args():
         ),
     )
     parser.add_argument(
-        "--center_crop",
-        action="store_true",
-        help="Whether to center crop images before resizing to resolution (if not set, random crop will be used)",
-    )
-    parser.add_argument(
-        "--random_flip",
-        action="store_true",
-        help="whether to randomly flip images horizontally",
-    )
-    parser.add_argument(
-        "--train_batch_size", type=int, default=16, help="Batch size (per device) for the training dataloader."
+        "--train_batch_size", type=int, default=1, help="Batch size (per device) for the training dataloader."
     )
     parser.add_argument("--num_train_epochs", type=int, default=100)
     parser.add_argument(
@@ -275,6 +272,11 @@ def main():
     else:
         optimizer_cls = torch.optim.AdamW
 
+    dataset = GetDataset(accelerator, args)
+    train_dataloader, train_dataset = dataset.get_dataloader()
+
+    text_encoder, vae, unet, noise_scheduler = get_model_componenets(args)
+
     optimizer = optimizer_cls(
         unet.parameters(),
         lr=args.learning_rate,
@@ -290,11 +292,11 @@ def main():
     # In distributed training, the load_dataset function guarantees that only one local process can concurrently
     # download the dataset.
 
-    toknizer = get_tokenizer(args.pretrained_model_name_or_path, args.revison)
+    # toknizer = get_tokenizer(args.pretrained_model_name_or_path, args.revison)
     
-    train_dataloader = torch.utils.data.DataLoader(
-        train_dataset, shuffle=True, collate_fn=collate_fn, batch_size=args.train_batch_size
-    )
+    # train_dataloader = torch.utils.data.DataLoader(
+    #     train_dataset, shuffle=True, collate_fn=collate_fn, batch_size=args.train_batch_size
+    # )
 
     # Scheduler and math around the number of training steps.
     overrode_max_train_steps = False
@@ -362,6 +364,7 @@ def main():
         unet.train()
         train_loss = 0.0
         for step, batch in enumerate(train_dataloader):
+            print(batch.keys())
             with accelerator.accumulate(unet):
                 # Convert images to latent space
                 latents = vae.encode(batch["pixel_values"].to(weight_dtype)).latent_dist.sample()
@@ -399,8 +402,8 @@ def main():
 
                 # Backpropagate
                 accelerator.backward(loss)
-                if accelerator.sync_gradients:
-                    accelerator.clip_grad_norm_(unet.parameters(), args.max_grad_norm)
+                # if accelerator.sync_gradients:
+                #     accelerator.clip_grad_norm_(unet.parameters(), args.max_grad_norm)
                 optimizer.step()
                 lr_scheduler.step()
                 optimizer.zero_grad()
