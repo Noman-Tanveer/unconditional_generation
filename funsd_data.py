@@ -5,12 +5,16 @@ from PIL import Image
 import torch
 import numpy as np
 from transformers import LayoutLMv3Processor, LayoutLMv3Tokenizer, LayoutLMv3FeatureExtractor
+from data_base import GetDataset
+from torchvision import transforms
 from torch.utils.data import Dataset
 
+train_transforms = transforms.Compose([transforms.PILToTensor()])
+target_transforms = transforms.Compose([transforms.PILToTensor()])
 
-class FUNSD(Dataset):
+class FUNSD(GetDataset):
 
-    def __init__(self, base_dir, transform=None, target_transform=None):
+    def __init__(self, base_dir, transform=train_transforms, target_transform=None):
         self.img_dir = os.path.join(base_dir, "images")
         self.annotations_dir = os.path.join(base_dir, "annotations")
         self.img_files = os.listdir(self.img_dir)

@@ -18,6 +18,13 @@ class GetDataset(Dataset):
         self.accelerator = accelerator
         self.args = args
 
+    def preprocess_train(self, examples):
+        images = [image.convert("RGB") for image in examples[image_column]]
+        examples["pixel_values"] = [train_transforms(image) for image in images]
+        examples["input_ids"] = tokenize_captions(examples)
+
+        return examples
+
     def get_dataloader(self):
         if self.args.dataset_name is not None:
             # Downloading and loading a dataset from the hub.
@@ -28,13 +35,15 @@ class GetDataset(Dataset):
             )
         else:
             logger.info("Specified dataset not found in the hub")
+
+        # TODO: Apply Transforms to the data
         
         with self.accelerator.main_process_first():
             if self.args.max_train_samples is not None:
                 dataset["train"] = dataset["train"].shuffle(seed=self.args.seed).select(range(self.args.max_train_samples))
             # Set the training transforms
-            # train_dataset = dataset["train"].with_transform(self.preprocess_train)
-        return DataLoader(dataset["train"], batch_size=self.args.train_batch_size), dataset["train"]
+        train_dataset = dataset["train"].with_transform(self.preprocess_train)
+        return DataLoader(train_dataset, batch_size=self.args.train_batch_size), dataset["train"]
 
     def load_custom_dataset():
         raise NotImplementedError("This dataset is not implemented in current implementation, implement in subclass")
