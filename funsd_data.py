@@ -4,23 +4,23 @@ from PIL import Image
 
 import torch
 import numpy as np
-from transformers import LayoutLMv3Processor, LayoutLMv3Tokenizer, LayoutLMv3FeatureExtractor
+from transformers import LayoutLMv3Processor, LayoutLMv3Tokenizer, LayoutLMv3ImageProcessor
 from data_base import GetDataset
 from torchvision import transforms
 from torch.utils.data import Dataset
 
-train_transforms = transforms.Compose([transforms.PILToTensor()])
 target_transforms = transforms.Compose([transforms.PILToTensor()])
 
-class FUNSD(GetDataset):
+class FUNSD(Dataset):
 
-    def __init__(self, base_dir, transform=train_transforms, target_transform=None):
+    def __init__(self, base_dir, args):
         self.img_dir = os.path.join(base_dir, "images")
         self.annotations_dir = os.path.join(base_dir, "annotations")
         self.img_files = os.listdir(self.img_dir)
-        self.transform = transform
-        self.target_transform = target_transform
-        self.processor = LayoutLMv3Processor.from_pretrained("microsoft/layoutlmv3-base", apply_ocr=False)
+        self.tokenizer = LayoutLMv3Tokenizer.from_pretrained("microsoft/layoutlmv3-base")
+        self.feature_extractor = LayoutLMv3ImageProcessor("microsoft/layoutlmv3-base", size={"height": args.resolution, "width": args.resolution}, apply_ocr=False)
+        self.processor = LayoutLMv3Processor(feature_extractor=self.feature_extractor, tokenizer=self.tokenizer)
+        self.transform = transforms.Compose([transforms.Normalize([0.5], [0.5])])
 
     def __len__(self):
         return len(self.img_files)
@@ -54,14 +54,9 @@ class FUNSD(GetDataset):
         image = self.read_img(img_path)
         labels = self.load_labels(labels_path)
         words, boxes = self.get_words_and_boxes(labels)
-        encoding = self.processor(image, words, boxes=boxes, return_tensors="pt")
-        encoding["bbox"] = encoding["bbox"][:,:512]
-        encoding["input_ids"] = encoding["input_ids"][:,:512]
-        encoding["attention_mask"] = encoding["attention_mask"][:,:512]
+        encoding = self.processor(image, words, boxes=boxes, return_tensors="pt", padding="max_length", max_length=512, truncation=True)
         for key, val in encoding.items():
+            if key == "pixel_values":
+                encoding[key] = self.transform(val)
             encoding[key] = torch.squeeze(val, 0)
-        if self.transform:
-            encoding["image"] = self.transform(image)
-        if self.target_transform:
-            labels = self.target_transform(labels)
         return encoding

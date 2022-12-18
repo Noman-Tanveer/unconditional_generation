@@ -6,12 +6,14 @@ import os
 import random
 from pathlib import Path
 from typing import Iterable, Optional
+from datetime import datetime
 
 import numpy as np
 from omegaconf import OmegaConf
 import torch
 import torch.nn.functional as F
 import torch.utils.checkpoint
+from torch.utils.data import DataLoader
 
 from accelerate import Accelerator
 from accelerate.logging import get_logger
@@ -23,7 +25,8 @@ from diffusers.utils import check_min_version
 from tqdm.auto import tqdm
 
 from ema import EMAModel
-from data_base import GetDataset
+from data_base import FunsdData
+from funsd_data import FUNSD
 from architecture import get_model_componenets
 
 # Will error if the minimal version of diffusers is not installed. Remove at your own risks.
@@ -57,7 +60,7 @@ def parse_args():
     parser.add_argument(
         "--dataset_name",
         type=str,
-        default="nielsr/funsd",
+        default="nielsr/funsd-layoutlmv3",
         help=(
             "The name of the Dataset (from the HuggingFace hub) to train on (could be your own, possibly private,"
             " dataset). It can also be a path pointing to a local copy of a dataset in your filesystem,"
@@ -101,7 +104,7 @@ def parse_args():
     parser.add_argument(
         "--output_dir",
         type=str,
-        default="sd-model-finetuned",
+        default=datetime.now().strftime("%-d %B %Y, %I:%M:%S%p"),
         help="The output directory where the model predictions and checkpoints will be written.",
     )
     parser.add_argument(
@@ -225,7 +228,6 @@ def parse_args():
 
     return args
 
-
 def main():
     args = parse_args()
     print(f"ALL args: : {args}")
@@ -272,8 +274,12 @@ def main():
     else:
         optimizer_cls = torch.optim.AdamW
 
-    dataset = GetDataset(accelerator, args)
-    train_dataloader, train_dataset = dataset.get_dataloader()
+    # dataset = FunsdData(accelerator, args)
+    train_dataset = FUNSD("FUNSD_dataset/training_data", args)
+    # train_dataset = dataset.get_dataset()
+    # train_dataloader = dataset.get_dataloader()
+
+    train_dataloader = DataLoader(train_dataset, batch_size=args.train_batch_size)
 
     text_encoder, vae, unet, noise_scheduler = get_model_componenets(args)
 
@@ -364,7 +370,6 @@ def main():
         unet.train()
         train_loss = 0.0
         for step, batch in enumerate(train_dataloader):
-            print(batch["image_path"])
             with accelerator.accumulate(unet):
                 # Convert images to latent space
                 latents = vae.encode(batch["pixel_values"].to(weight_dtype)).latent_dist.sample()
