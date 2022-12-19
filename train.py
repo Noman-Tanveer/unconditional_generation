@@ -24,9 +24,9 @@ from diffusers.optimization import get_scheduler
 from diffusers.utils import check_min_version
 from tqdm.auto import tqdm
 
-from ema import EMAModel
-from data_base import FunsdData
-from funsd_data import FUNSD
+from utils.ema import EMAModel
+from dataloaders.data_base import FunsdData
+from dataloaders.funsd_data import FUNSD
 from architecture import get_model_componenets
 
 # Will error if the minimal version of diffusers is not installed. Remove at your own risks.

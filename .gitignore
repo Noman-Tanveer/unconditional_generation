@@ -9,3 +9,5 @@ unet
 *-512
 *.png
 **__pycache__
+*AM
+*PM

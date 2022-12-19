@@ -5,7 +5,7 @@ from PIL import Image
 import torch
 import numpy as np
 from transformers import LayoutLMv3Processor, LayoutLMv3Tokenizer, LayoutLMv3ImageProcessor
-from data_base import GetDataset
+from dataloaders.data_base import GetDataset
 from torchvision import transforms
 from torch.utils.data import Dataset
 
