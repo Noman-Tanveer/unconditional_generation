@@ -1,14 +1,16 @@
 import os
 import json
+from typing import TypedDict
 from PIL import Image
 
 import torch
 import numpy as np
 from transformers import LayoutLMv3Processor, LayoutLMv3Tokenizer, LayoutLMv3ImageProcessor
-from dataloaders.data_base import GetDataset
+# from data_base import GetDataset
 from torchvision import transforms
 from torch.utils.data import Dataset
 
+embedding = TypedDict('embedding', {'input_ids': torch.Tensor, 'bbox': torch.Tensor, 'attention_mask': torch.Tensor, 'pixel_values': torch.Tensor})
 target_transforms = transforms.Compose([transforms.PILToTensor()])
 
 class FUNSD(Dataset):
@@ -46,7 +48,7 @@ class FUNSD(Dataset):
         assert len(boxes) == len(words)
         return words, boxes
 
-    def __getitem__(self, idx):
+    def __getitem__(self, idx) -> embedding:
         encoding = dict()
         img_name = self.img_files[idx]
         img_path = os.path.join(self.img_dir, img_name)
@@ -60,3 +62,10 @@ class FUNSD(Dataset):
                 encoding[key] = self.transform(val)
             encoding[key] = torch.squeeze(val, 0)
         return encoding
+
+if __name__ == "__main__":
+    import types
+    args = types.SimpleNamespace()
+    args.resolution = 512
+    dataset = FUNSD(base_dir="../FUNSD_dataset/training_data", args=args)
+    print(next(iter(dataset)).keys())

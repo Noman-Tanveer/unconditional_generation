@@ -11,3 +11,5 @@ unet
 **__pycache__
 *AM
 *PM
+*.jsonl
+*DocBank
